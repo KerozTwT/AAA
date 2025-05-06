@@ -1,0 +1,89 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+local Character = Player.Character or Player.CharacterAdded:Wait()
+local Root = Character:WaitForChild("HumanoidRootPart")
+
+local AlreadyTriggered = false
+local TriggeredPrompts = {}
+
+local function TweenCharacterTo(Destination)
+    local Proxy = Instance.new("Part")
+    Proxy.Anchored = true
+    Proxy.CanCollide = false
+    Proxy.Transparency = 1
+    Proxy.CFrame = Root.CFrame
+    Proxy.Parent = workspace
+
+    local Goal = { Position = Destination + Vector3.new(0, 3, 0) }
+    local TweenInfoObj = TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+    local Tween = TweenService:Create(Proxy, TweenInfoObj, Goal)
+
+    Tween:Play()
+
+    local Connection
+    Connection = RunService.Heartbeat:Connect(function()
+        Root.CFrame = Proxy.CFrame
+    end)
+
+    Tween.Completed:Connect(function()
+        Connection:Disconnect()
+        Proxy:Destroy()
+    end)
+end
+
+local function TweenToAntiMagicZone()
+    local EffectZones = workspace:FindFirstChild("EffectZones")
+    if not EffectZones then return end
+
+    for _, Obj in ipairs(EffectZones:GetChildren()) do
+        if Obj.Name == "ZoneHitbox" and Obj:IsA("Part") then
+            TweenCharacterTo(Obj.Position)
+            break
+        end
+    end
+end
+
+local function TriggerPrompt(Prompt)
+    if TriggeredPrompts[Prompt] then return end
+    local Part = Prompt.Parent
+    if Part and Part:IsA("BasePart") then
+        TriggeredPrompts[Prompt] = true
+        Root.CFrame = CFrame.new(Part.Position + Vector3.new(0, 3, 0))
+        task.wait(1)
+        Prompt:InputHoldBegin()
+        task.wait(1)
+        Prompt:InputHoldEnd()
+    end
+end
+
+while true do
+    local FoundText = false
+    for _, Gui in ipairs(PlayerGui:GetChildren()) do
+        if Gui:IsA("ScreenGui") then
+            for _, Descendant in ipairs(Gui:GetDescendants()) do
+                if Descendant:IsA("TextLabel") and Descendant.Text:find("The Heavenly King is about to stun/destroy several units!") then
+                    FoundText = true
+                    if not AlreadyTriggered then
+                        TweenToAntiMagicZone()
+                        AlreadyTriggered = true
+                    end
+                end
+            end
+        end
+    end
+    if not FoundText then
+        AlreadyTriggered = false
+    end
+
+    for _, Prompt in ipairs(workspace:GetDescendants()) do
+        if Prompt:IsA("ProximityPrompt") and not TriggeredPrompts[Prompt] then
+            TriggerPrompt(Prompt)
+        end
+    end
+
+    task.wait(0.5)
+end
