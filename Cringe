@@ -1,0 +1,120 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+
+local player = Players.LocalPlayer
+local PlayerGui = player:WaitForChild("PlayerGui")
+
+-- Auto bật
+local autoClick = true
+local clickDelay = 0.1
+local lastClick = 0
+
+-- File lưu vị trí
+local posFile = "ClickTargetPos.json"
+
+-- Tải vị trí click target nếu có
+local targetPos = UDim2.new(0.5, -25, 0.5, -25) -- mặc định giữa màn hình
+pcall(function()
+	if isfile(posFile) then
+		local posData = HttpService:JSONDecode(readfile(posFile))
+		targetPos = UDim2.new(posData.scaleX, posData.offsetX, posData.scaleY, posData.offsetY)
+	end
+end)
+
+-- GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "AutoClickerGUI"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.Parent = PlayerGui
+
+-- Nút bật/tắt (góc trái)
+local btn = Instance.new("TextButton")
+btn.Size = UDim2.new(0, 150, 0, 50)
+btn.Position = UDim2.new(0, 20, 0, 150)
+btn.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+btn.Font = Enum.Font.SourceSansBold
+btn.TextSize = 20
+btn.Text = "Auto Click: ON"
+btn.Parent = gui
+
+btn.MouseButton1Click:Connect(function()
+	autoClick = not autoClick
+	if autoClick then
+		btn.Text = "Auto Click: ON"
+		btn.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+	else
+		btn.Text = "Auto Click: OFF"
+		btn.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
+	end
+end)
+
+-- Vòng tròn để click
+local clickTarget = Instance.new("Frame")
+clickTarget.Size = UDim2.new(0, 50, 0, 50)
+clickTarget.Position = targetPos
+clickTarget.BackgroundColor3 = Color3.fromRGB(255, 85, 0)
+clickTarget.BorderSizePixel = 0
+clickTarget.Parent = gui
+
+-- Bo tròn hình
+local corner = Instance.new("UICorner", clickTarget)
+corner.CornerRadius = UDim.new(1, 0)
+
+-- Kéo hình tròn
+local dragging, dragInput, dragStart, startPos
+clickTarget.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = clickTarget.Position
+	end
+end)
+
+clickTarget.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInput = input
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		local delta = input.Position - dragStart
+		clickTarget.Position = UDim2.new(
+			startPos.X.Scale, startPos.X.Offset + delta.X,
+			startPos.Y.Scale, startPos.Y.Offset + delta.Y
+		)
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 and dragging then
+		dragging = false
+		local pos = clickTarget.Position
+		local saveData = {
+			scaleX = pos.X.Scale,
+			offsetX = pos.X.Offset,
+			scaleY = pos.Y.Scale,
+			offsetY = pos.Y.Offset
+		}
+		writefile(posFile, HttpService:JSONEncode(saveData))
+	end
+end)
+
+-- Click tại vị trí của hình tròn
+RunService.RenderStepped:Connect(function()
+	if autoClick and tick() - lastClick >= clickDelay then
+		local absPos = clickTarget.AbsolutePosition
+		local centerX = absPos.X + clickTarget.AbsoluteSize.X / 2
+		local centerY = absPos.Y + clickTarget.AbsoluteSize.Y / 2
+
+		VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 0)
+		VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 0)
+
+		lastClick = tick()
+	end
+end)
