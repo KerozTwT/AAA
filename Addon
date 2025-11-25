@@ -1,0 +1,8 @@
+local args = {
+    [1] = "AttackEffects";
+}
+
+local remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes", 9e9):WaitForChild("SetSettings", 9e9)
+
+remotes:InvokeServer(unpack(args))
+remotes:InvokeServer(unpack(args))
