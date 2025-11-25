@@ -1,0 +1,5 @@
+local spiralTrials = workspace:WaitForChild("Lobby", 9e9):WaitForChild("SpiralTrials", 9e9):GetChildren()[2]
+local remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes", 9e9):WaitForChild("SpiralTrial", 9e9)
+
+remotes:WaitForChild("Enter", 9e9):FireServer(spiralTrials)
+remotes:WaitForChild("Start", 9e9):FireServer()
