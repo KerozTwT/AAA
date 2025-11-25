@@ -1,1 +1,24 @@
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local root = character:WaitForChild("HumanoidRootPart")
 
+local teleportTo = CFrame.new(-261.5435, -55.2611, 973.3748)
+local teleportBack = CFrame.new(-290.6289, -54.111, 625.865)
+local delayTime = 10
+
+while true do
+    local found = false
+    repeat
+        for _, obj in ipairs(workspace.Effects:GetChildren()) do
+            if obj:IsA("BasePart") then
+                found = true
+                break
+            end
+        end
+        task.wait(0.2)
+    until found
+
+    root.CFrame = teleportTo
+    task.wait(delayTime)
+    root.CFrame = teleportBack
+end
